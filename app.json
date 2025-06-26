@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "EastsideGym3",
+    "slug": "eastsidegym3",
+    "version": "1.0.0",
+    "scheme": "eastsidegym3",
+    "plugins": [
+      "expo-secure-store"
+    ],
+    "extra": {
+      "clerkPublishableKey": "${EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY}"
+    }
+  }
+}
