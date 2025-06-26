@@ -1,11 +1,13 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, Animated, Dimensions, Easing, Alert } from 'react-native';
 import { useUser, useAuth } from '@clerk/clerk-expo';
-import LeftSideMenu from './LeftSideMenu'; // Import your LeftSideMenu component
+import LeftSideMenu from './LeftSideMenu'; // Your existing LeftSideMenu component
 
-// Since we don't have these custom components, I've commented them out
-// so the code is runnable. You can uncomment them in your project.
-// import BarcodeDisplay from './BarcodeDisplay';
+// --- Step 3.1: Import the BarcodeDisplay component ---
+// Make sure the path matches your project structure.
+import BarcodeDisplay from '../components/common/BarcodeDisplay';
+
+// We'll leave StickFigureAnimation commented out as in your original code.
 // import StickFigureAnimation from './StickFigureAnimation';
 
 const screenWidth = Dimensions.get('window').width;
@@ -62,6 +64,7 @@ export default function HomeScreen() {
     }
   }, [currentIndex, firstName, slideInCompleted]);
 
+
   // Slide-in animation for feature boxes
   useEffect(() => {
     Animated.stagger(100, [
@@ -96,16 +99,13 @@ export default function HomeScreen() {
 
   // Handle Membership Button Click
   const handleMembershipClick = async () => {
-    // This is where you would call your backend to create a Stripe payment intent.
-    // IMPORTANT: When calling your backend, you should now include the user's ID
-    // so you can link the payment to their account.
-    // Example: body: JSON.stringify({ clerkId: user.id, amount: 1000 })
     Alert.alert("Membership", "This would open the payment screen.");
   };
 
-  // Menu animation functions - exactly like the reference
+  // Menu animation functions
   const openMenu = () => {
     setIconColor('white');
+    setIsMenuOpen(true); // Set state immediately
 
     Animated.parallel([
       Animated.timing(menuSlideAnim, {
@@ -120,17 +120,13 @@ export default function HomeScreen() {
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
-    ]).start();
-
-    Animated.sequence([
-      Animated.delay(45),
       Animated.timing(iconSlideAnim, {
-        toValue: 0.8,
+        toValue: screenWidth * 0.7 - 70, // Precise end position
         duration: 350,
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
-    ]).start(() => setIsMenuOpen(true));
+    ]).start();
   };
 
   const closeMenu = () => {
@@ -156,7 +152,7 @@ export default function HomeScreen() {
         useNativeDriver: true,
       }),
     ]).start(() => {
-      setIsMenuOpen(false);
+      setIsMenuOpen(false); // Set state after animation
     });
   };
 
@@ -179,7 +175,7 @@ export default function HomeScreen() {
     } else {
       setIsBarcodeMenuOpen(true);
       Animated.timing(barcodeMenuAnim, {
-        toValue: screenHeight * 0.1,
+        toValue: screenHeight * 0.1, // Slide up to 10% from the top
         duration: 400,
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
@@ -187,18 +183,13 @@ export default function HomeScreen() {
     }
   };
 
+
   const handleLogout = () => {
     signOut(); // Use Clerk's signOut function
   };
 
-  const iconSlidePosition = iconSlideAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, screenWidth * 0.7 - 70],
-  });
-
   return (
     <View style={styles.container}>
-      {/* Use the LeftSideMenu component */}
       <LeftSideMenu
         menuSlideAnim={menuSlideAnim}
         menuOpacityAnim={menuOpacityAnim}
@@ -217,13 +208,16 @@ export default function HomeScreen() {
       >
         <View style={styles.barcodeMenuContent}>
           <Text style={styles.barcodeMenuTitle}>Your Membership Barcode</Text>
-          {/* === CLERK INTEGRATION: Use user.id for the barcode value === */}
+
+          {/* --- Step 3.2: Integrate the BarcodeDisplay Component --- */}
+          {/* We check if the user object exists before trying to access its id. */}
+          {/* Then, we pass the user's unique ID to the BarcodeDisplay component. */}
           {user ? (
-            // <BarcodeDisplay value={user.id} />
-            <Text>Barcode for {user.id}</Text> // Placeholder
+            <BarcodeDisplay value={user.id} />
           ) : (
             <Text>Loading Barcode...</Text>
           )}
+
           <TouchableOpacity style={styles.closeButton} onPress={toggleBarcodeMenu}>
             <Text style={styles.closeButtonText}>Close</Text>
           </TouchableOpacity>
@@ -243,7 +237,7 @@ export default function HomeScreen() {
               style={[
                 styles.menuIcon,
                 { tintColor: iconColor },
-                { transform: [{ translateX: iconSlidePosition }] },
+                { transform: [{ translateX: iconSlideAnim }] },
               ]}
             />
           </TouchableOpacity>
@@ -261,7 +255,6 @@ export default function HomeScreen() {
           <View style={styles.featuresGrid}>
             {/* Top Row */}
             <View style={styles.featureRow}>
-              {/* Box 1 (Top Left) */}
               <Animated.View style={{ transform: [{ translateX: box1Anim }] }}>
                 <TouchableOpacity style={styles.featureBox} onPress={handleMembershipClick}>
                   <View style={styles.featureBoxTop}>
@@ -273,7 +266,6 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               </Animated.View>
 
-              {/* Box 2 (Top Right) */}
               <Animated.View style={{ transform: [{ translateX: box2Anim }] }}>
                 <TouchableOpacity style={styles.featureBox} onPress={toggleBarcodeMenu}>
                   <View style={styles.featureBoxTop}>
@@ -288,7 +280,6 @@ export default function HomeScreen() {
 
             {/* Bottom Row */}
             <View style={styles.featureRow}>
-              {/* Box 3 (Bottom Left) */}
               <Animated.View style={{ transform: [{ translateX: box3Anim }] }}>
                 <TouchableOpacity style={styles.featureBox}>
                   <View style={styles.featureBoxTop}>
@@ -300,7 +291,6 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               </Animated.View>
 
-              {/* Box 4 (Bottom Right) */}
               <Animated.View style={{ transform: [{ translateX: box4Anim }] }}>
                 <TouchableOpacity style={styles.featureBox}>
                   <View style={styles.featureBoxTop}>
@@ -413,7 +403,7 @@ const styles = StyleSheet.create({
   },
   barcodeMenuContent: {
     alignItems: 'center',
-    justifyContent: 'top',
+    justifyContent: 'flex-start', // Changed to flex-start
     flex: 1,
     marginTop: 20,
   },
@@ -424,10 +414,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   closeButton: {
-    marginTop: 20,
-    padding: 10,
+    position: 'absolute', // Position the close button for better UI
+    bottom: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 30,
     backgroundColor: '#000',
-    borderRadius: 5,
+    borderRadius: 8,
   },
   closeButtonText: {
     fontSize: 16,
