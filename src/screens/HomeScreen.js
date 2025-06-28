@@ -1,3 +1,5 @@
+// C:/Users/alexh/OneDrive/Documents/EastsideGym3/src/screens/HomeScreen.js
+
 import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
@@ -18,9 +20,10 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Svg, { Circle } from 'react-native-svg';
 import { useUser } from '@clerk/clerk-react';
+import { useAuth } from '@clerk/clerk-expo'; // Import useAuth for the logout function
 
 import MetricCardWidget from '../components/common/MetricCard';
-import BarcodeDisplay from '../components/common/BarcodeDisplay';
+import BarcodeDisplay from '../components/common/BarcodeDisplay'; // Import BarcodeDisplay
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -57,7 +60,6 @@ const AppTheme = {
 
 // --- Main Dashboard Screen Component ---
 export default function DashboardScreen({ navigation }) {
-
   // --- LOCAL WIDGET IMPLEMENTATIONS ---
   const TypingAnimation = ({ text, style }) => {
     const [displayedText, setDisplayedText] = useState('');
@@ -131,24 +133,97 @@ export default function DashboardScreen({ navigation }) {
     );
   };
 
-  const SlideMenu = ({ isOpen, animation, onClose, quickActions }) => {
-    const menuTranslateX = animation.interpolate({ inputRange: [0, 1], outputRange: [-w(100), 0] });
+  const SlideMenu = ({ isOpen, animation, onClose, quickActions, onLogout }) => {
+    const menuTranslateX = animation.interpolate({ inputRange: [0, 1], outputRange: [-w(75), 0] });
+    const overlayOpacity = animation.interpolate({ inputRange: [0, 1], outputRange: [0, 0.7] });
+
     const [isMenuRendered, setIsMenuRendered] = useState(false);
-    useEffect(() => { if(isOpen) setIsMenuRendered(true); }, [isOpen]);
+    useEffect(() => { if (isOpen) setIsMenuRendered(true); }, [isOpen]);
     const onAnimationComplete = ({ finished }) => { if (finished && !isOpen) setIsMenuRendered(false); };
+
+    const MenuHeader = () => (
+      <View style={styles.menuHeader}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={styles.menuHeaderTitle}>Eastside Gym</Text>
+          <TouchableOpacity onPress={onClose} style={styles.menuCloseButton}>
+            <Icon name="close" size={20} color={AppTheme.highlightWhite} />
+          </TouchableOpacity>
+        </View>
+        <SizedBox height={h(2)} />
+        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+          <View style={[styles.menuCircle, { width: w(20), height: w(20), borderColor: 'rgba(220, 179, 53, 0.3)' }]}>
+            <View style={[styles.menuCircle, { width: w(15), height: w(15), borderColor: 'rgba(220, 179, 53, 0.5)' }]}>
+              <View style={[styles.menuCircle, { width: w(10), height: w(10), backgroundColor: AppTheme.accentYellow, borderWidth: 0 }]}>
+                <Icon name="fitness-center" size={20} color={AppTheme.primaryBlack} />
+              </View>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+
+    const MenuItem = ({ action, index }) => {
+      const itemTranslate = animation.interpolate({
+        inputRange: [0, 0.4 + index * 0.06, 0.6 + index * 0.06, 1],
+        outputRange: [-w(50), -w(50), 0, 0],
+        extrapolate: 'clamp',
+      });
+      const itemOpacity = animation.interpolate({
+        inputRange: [0, 0.4 + index * 0.06, 0.6 + index * 0.06, 1],
+        outputRange: [0, 0, 1, 1],
+        extrapolate: 'clamp',
+      });
+
+      return (
+        <Animated.View style={{ opacity: itemOpacity, transform: [{ translateX: itemTranslate }] }}>
+          <TouchableOpacity
+            style={styles.menuListItem}
+            onPress={() => {
+              onClose();
+              setTimeout(() => navigation.navigate(action.route), 250);
+            }}
+          >
+            <View style={styles.menuListItemIcon}>
+              <Icon name={action.icon} size={20} color={AppTheme.accentYellow} />
+            </View>
+            <SizedBox width={w(4)} />
+            <Text style={styles.menuListItemText}>{action.title}</Text>
+            <Icon name="arrow-forward-ios" size={16} color={AppTheme.mediumGray} />
+          </TouchableOpacity>
+        </Animated.View>
+      );
+    };
+
+    const MenuFooter = () => (
+      <View style={styles.menuFooter}>
+        <View style={styles.menuDivider} />
+        <SizedBox height={h(2)} />
+        <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }} onPress={onLogout}>
+          <Icon name="logout" size={20} color={AppTheme.errorRed} />
+          <SizedBox width={w(4)} />
+          <Text style={styles.menuFooterLogoutText}>Logout</Text>
+        </TouchableOpacity>
+        <SizedBox height={h(2)} />
+        <Text style={styles.menuFooterVersionText}>Version 1.0.0</Text>
+      </View>
+    );
+
     if (!isMenuRendered) return null;
+
     return (
       <View style={StyleSheet.absoluteFill} pointerEvents={isOpen ? 'auto' : 'none'}>
-        <Pressable style={styles.menuOverlay} onPress={onClose} />
+        <Animated.View style={[styles.menuOverlay, { opacity: overlayOpacity }]} onLayout={onAnimationComplete}>
+          <Pressable style={{ flex: 1 }} onPress={onClose} />
+        </Animated.View>
         <Animated.View style={[styles.slideMenu, { transform: [{ translateX: menuTranslateX }] }]}>
-          <SafeAreaView style={{flex: 1}} onLayout={onAnimationComplete}>
-            <Text style={styles.menuTitle}>Quick Actions</Text>
-            {quickActions.map(action => (
-              <TouchableOpacity key={action.title} style={styles.menuItem} onPress={() => { onClose(); navigation.navigate(action.route); }}>
-                <Icon name={action.icon} size={24} color={AppTheme.accentYellow}/>
-                <Text style={styles.menuItemText}>{action.title}</Text>
-              </TouchableOpacity>
-            ))}
+          <SafeAreaView style={{ flex: 1, backgroundColor: AppTheme.charcoalBlack }}>
+            <MenuHeader />
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: h(2) }}>
+              {quickActions.map((action, index) => (
+                <MenuItem key={action.title} action={action} index={index} />
+              ))}
+            </ScrollView>
+            <MenuFooter />
           </SafeAreaView>
         </Animated.View>
       </View>
@@ -173,13 +248,18 @@ export default function DashboardScreen({ navigation }) {
 
   // --- STATE, REFS, AND DATA ---
   const { isLoaded, isSignedIn, user: clerkUser } = useUser();
+  const { signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentTabIndex, setCurrentTabIndex] = useState(0);
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
+
+  // Animation refs
   const slideAnim = useRef(new Animated.Value(h(100))).current;
   const fabAnim = useRef(new Animated.Value(0)).current;
   const menuAnim = useRef(new Animated.Value(0)).current;
+
+  // Barcode animation refs (restored to original implementation)
   const barcodeMenuAnim = useRef(new Animated.Value(screenHeight)).current;
   const decorElement1Anim = useRef(new Animated.Value(-200)).current;
   const decorElement2Anim = useRef(new Animated.Value(200)).current;
@@ -213,15 +293,35 @@ export default function DashboardScreen({ navigation }) {
     }
   }, [isLoaded]);
 
-  const toggleMenu = () => { setIsMenuOpen(!isMenuOpen); Animated.timing(menuAnim, { toValue: isMenuOpen ? 0 : 1, duration: 300, useNativeDriver: true }).start(); };
+  const toggleMenu = () => {
+    const toValue = isMenuOpen ? 0 : 1;
+    setIsMenuOpen(!isMenuOpen);
+    Animated.timing(menuAnim, {
+      toValue,
+      duration: 500,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleLogout = async () => {
+    toggleMenu(); // Close the menu
+    setTimeout(async () => {
+      await signOut(); // Sign out after menu animation starts
+    }, 250);
+  };
+
   const refreshData = async () => { setIsRefreshing(true); await new Promise(resolve => setTimeout(resolve, 2000)); setIsRefreshing(false); };
 
   const toggleBarcodeModal = () => {
     if (isBarcodeModalOpen) {
       Animated.timing(barcodeMenuAnim, { toValue: screenHeight, duration: 400, easing: Easing.inOut(Easing.ease), useNativeDriver: true }).start(() => {
         setIsBarcodeModalOpen(false);
-        decorElement1Anim.setValue(-200); decorElement2Anim.setValue(200);
-        decorElement3Anim.setValue(-200); decorElement4Anim.setValue(200);
+        // Reset values for next open
+        decorElement1Anim.setValue(-200);
+        decorElement2Anim.setValue(200);
+        decorElement3Anim.setValue(-200);
+        decorElement4Anim.setValue(200);
         barcodeScaleAnim.setValue(0);
       });
     } else {
@@ -275,15 +375,23 @@ export default function DashboardScreen({ navigation }) {
           </Animated.View>
           <View style={{ height: h(12) }} />
         </ScrollView>
-        <SlideMenu isOpen={isMenuOpen} animation={menuAnim} onClose={toggleMenu} quickActions={quickActions} navigation={navigation}/>
+
         {isRefreshing && ( <View style={styles.refreshOverlay}><View style={styles.refreshIndicatorContainer}><ActivityIndicator size="large" color={AppTheme.accentYellow} /><Text style={styles.refreshText}>Syncing your data...</Text></View></View> )}
       </View>
       <BottomNavigationBar currentTabIndex={currentTabIndex} onTabTapped={onTabTapped} />
       <Animated.View style={[styles.fabContainer, { transform: [{ scale: fabAnim }] }]}>
         <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('Workout')}>
-          <Icon name="play-arrow" size={24} color={AppTheme.primaryBlack} /><Text style={styles.fabLabel}>Start Workout</Text>
+          <Icon name="play-arrow" size={24} color={AppTheme.primaryBlack} />
+          <Text style={styles.fabLabel}>Start Workout</Text>
         </TouchableOpacity>
       </Animated.View>
+      <SlideMenu
+        isOpen={isMenuOpen}
+        animation={menuAnim}
+        onClose={toggleMenu}
+        quickActions={quickActions}
+        onLogout={handleLogout}
+      />
 
       {isBarcodeModalOpen && (
         <Animated.View style={[ styles.enhancedBarcodeMenu, { transform: [{ translateY: barcodeMenuAnim }] }]}>
@@ -321,20 +429,34 @@ const styles = StyleSheet.create({
   membershipBadge: { backgroundColor: 'rgba(220, 179, 53, 0.1)', paddingHorizontal: w(3), paddingVertical: h(0.5), borderRadius: 20, alignSelf: 'flex-start', borderWidth: 1, borderColor: 'rgba(220, 179, 53, 0.2)' },
   weeklyGoalCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: AppTheme.cardColor, padding: w(4), borderRadius: 16, marginVertical: h(2) },
   weeklyGoalTextContainer: { flex: 1, marginLeft: w(4) },
-  fabContainer: { position: 'absolute', bottom: h(9) + h(5), right: w(4) },
+  fabContainer: { position: 'absolute', bottom: h(9) + h(5), right: w(4), zIndex: 10 },
   fab: { flexDirection: 'row', alignItems: 'center', backgroundColor: AppTheme.accentYellow, paddingVertical: h(1.5), paddingHorizontal: w(5), borderRadius: 30, elevation: 4, shadowColor: AppTheme.accentYellow, shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.3, shadowRadius: 4 },
   fabLabel: { ...AppTheme.textTheme.labelLarge, color: AppTheme.primaryBlack, marginLeft: w(2) },
   bottomNav: { flexDirection: 'row', height: h(9), backgroundColor: AppTheme.scaffoldBackgroundColor, borderTopWidth: 1, borderTopColor: AppTheme.charcoalBlack },
   bottomNavItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   bottomNavLabel: { ...AppTheme.textTheme.labelSmall, marginTop: h(0.5), color: AppTheme.mediumGray },
-  slideMenu: { position: 'absolute', top: 0, bottom: 0, left: 0, width: w(75), backgroundColor: AppTheme.scaffoldBackgroundColor, zIndex: 1000, padding: w(4), borderRightWidth: 1, borderRightColor: AppTheme.charcoalBlack },
-  menuOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 999 },
-  menuTitle: { ...AppTheme.textTheme.headlineSmall, color: AppTheme.highlightWhite, marginBottom: h(4) },
-  menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: h(2) },
-  menuItemText: { ...AppTheme.textTheme.titleMedium, marginLeft: w(4) },
   refreshOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   refreshIndicatorContainer: { backgroundColor: AppTheme.cardColor, padding: w(5), borderRadius: 12, flexDirection: 'row', alignItems: 'center' },
   refreshText: { ...AppTheme.textTheme.bodyMedium, color: AppTheme.highlightWhite, marginLeft: w(4) },
+
+  // New Slide Menu Styles
+  menuOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,1)', zIndex: 999 },
+  slideMenu: { position: 'absolute', top: 0, bottom: 0, left: 0, width: w(75), zIndex: 1000,
+    shadowColor: "#000", shadowOffset: { width: 4, height: 0 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 20,
+  },
+  menuHeader: { padding: w(4), backgroundColor: 'rgba(220, 179, 53, 0.05)' },
+  menuHeaderTitle: { ...AppTheme.textTheme.headlineSmall, color: AppTheme.highlightWhite, fontWeight: '700' },
+  menuCloseButton: { padding: w(2), backgroundColor: AppTheme.cardColor, borderRadius: 8 },
+  menuCircle: { borderRadius: 100, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  menuListItem: { flexDirection: 'row', alignItems: 'center', marginHorizontal: w(4), marginVertical: h(1), padding: w(4), backgroundColor: AppTheme.cardColor, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(220, 179, 53, 0.1)' },
+  menuListItemIcon: { padding: w(2), backgroundColor: 'rgba(220, 179, 53, 0.1)', borderRadius: 8 },
+  menuListItemText: { ...AppTheme.textTheme.titleMedium, fontWeight: '500', flex: 1 },
+  menuFooter: { padding: w(4) },
+  menuDivider: { height: 1, backgroundColor: AppTheme.cardColor },
+  menuFooterLogoutText: { ...AppTheme.textTheme.titleMedium, color: AppTheme.errorRed, fontWeight: '500' },
+  menuFooterVersionText: { ...AppTheme.textTheme.labelSmall, color: AppTheme.mediumGray, textAlign: 'center' },
+
+  // Barcode Modal Styles
   enhancedBarcodeMenu: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000000', zIndex: 2000, overflow: 'hidden' },
   decorElement: { position: 'absolute', backgroundColor: AppTheme.accentYellow, borderRadius: 25 },
   decorElement1: { width: 150, height: 150, top: '15%', left: -75 },
